@@ -4,97 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Health Reminder</title>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./icon.png">
     <meta name="theme-color" content="#2563eb">
     <style>
         :root { --primary: #2563eb; --bg: #f3f4f6; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; margin: 0; user-select: none; }
-        .app-box { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); height: fit-content; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; user-select: none; }
+        .box { background: white; width: 100%; max-width: 400px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { text-align: center; margin-top: 0; color: #1e293b; }
         
-        h2 { text-align: center; color: #1e293b; margin-top: 0; }
+        .row { margin-bottom: 15px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
         
-        /* Nút cài đặt PWA */
-        #installBtn { display: none; width: 100%; background: #0f172a; color: white; padding: 10px; border: none; border-radius: 8px; margin-bottom: 20px; font-weight: bold; cursor: pointer; }
-        
-        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        input { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; width: 100%; }
-        button.add { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; white-space: nowrap;}
-        
-        .list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .item { background: #f8fafc; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
-        .item strong { display: block; color: #334155; }
-        .item small { color: #64748b; }
-        .del-btn { color: #ef4444; background: none; border: none; cursor: pointer; font-weight: bold; padding: 5px; }
+        #list { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .del { color: red; cursor: pointer; font-weight: bold; padding: 5px; }
 
-        /* Popup */
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999; backdrop-filter: blur(4px); }
-        .popup { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 80%; max-width: 300px; animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        /* Popup đè lên màn hình */
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
+        .modal { background: white; padding: 30px; border-radius: 16px; text-align: center; width: 300px; animation: pop 0.3s; }
+        @keyframes pop { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
     </style>
 </head>
 <body>
 
-    <div class="app-box">
-        <button id="installBtn">⬇️ Cài đặt App vào máy</button>
-        
-        <h2>⏰ Nhắc nhở</h2>
-        <div class="input-group">
-            <input type="text" id="msg" placeholder="VD: Uống nước" value="Uống nước 💧">
+    <div class="box">
+        <h2>⏰ Nhắc nhở sức khỏe</h2>
+        <div class="row">
+            <input id="msg" type="text" placeholder="Nội dung" value="Uống nước 💧">
         </div>
-        <div class="input-group">
-            <input type="number" id="time" placeholder="Phút" value="30">
-            <button class="add" onclick="add()">Thêm</button>
+        <div class="row">
+            <input id="time" type="number" placeholder="Phút" value="30">
+            <button onclick="add()">Thêm</button>
         </div>
-
-        <div id="list" class="list"></div>
-        <p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px">App chạy ngầm & gửi thông báo</p>
+        <div id="list"></div>
+        <div style="font-size:12px; color:#888; text-align:center; margin-top:15px">
+            Hoàng GV
+        </div>
     </div>
 
-    <div class="overlay" id="overlay">
-        <div class="popup">
-            <div style="font-size: 40px; margin-bottom: 10px">🔔</div>
-            <h3 id="popMsg" style="margin: 0 0 10px 0">Thông báo</h3>
-            <button onclick="document.getElementById('overlay').style.display='none'" style="background: var(--primary); color: white; border: none; padding: 8px 24px; border-radius: 20px; cursor: pointer;">Đóng</button>
+    <div id="overlay">
+        <div class="modal">
+            <div style="font-size:40px; margin-bottom:10px">🔔</div>
+            <h3 id="popTxt" style="margin:0 0 15px 0"></h3>
+            <button onclick="document.getElementById('overlay').style.display='none'">Đóng</button>
         </div>
     </div>
 
     <script>
-        // --- 1. LOGIC PWA (QUAN TRỌNG) ---
-        let deferredPrompt;
+        // 1. Đăng ký Service Worker để chạy Offline
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js');
+            navigator.serviceWorker.register('./sw.js').then(() => console.log("Service Worker Registered"));
         }
-        
-        // Bắt sự kiện cài đặt
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            const btn = document.getElementById('installBtn');
-            btn.style.display = 'block'; // Hiện nút cài đặt
-            
-            btn.addEventListener('click', () => {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(() => {
-                    btn.style.display = 'none';
-                });
-            });
-        });
 
-        // --- 2. LOGIC APP ---
-        let reminders = JSON.parse(localStorage.getItem('pwaReminders')) || [];
+        // 2. Logic App
+        let reminders = JSON.parse(localStorage.getItem('offlineDB')) || [];
 
         function render() {
-            const list = document.getElementById('list');
-            list.innerHTML = '';
+            const el = document.getElementById('list');
+            el.innerHTML = '';
             reminders.forEach((r, i) => {
-                list.innerHTML += `
-                    <div class="item">
-                        <div>
-                            <strong>${r.msg}</strong>
-                            <small>Mỗi ${r.time} phút | Còn ${format(r.left)}</small>
-                        </div>
-                        <button class="del-btn" onclick="del(${i})">Xóa</button>
-                    </div>`;
+                el.innerHTML += `
+                <div class="item">
+                    <div>
+                        <strong>${r.msg}</strong><br>
+                        <small>Mỗi ${r.time}p • Còn: ${Math.floor(r.left/60)}:${(r.left%60).toString().padStart(2,'0')}</small>
+                    </div>
+                    <span class="del" onclick="del(${i})">✕</span>
+                </div>`;
             });
         }
 
@@ -113,12 +92,8 @@
         }
 
         function save() {
-            localStorage.setItem('pwaReminders', JSON.stringify(reminders));
+            localStorage.setItem('offlineDB', JSON.stringify(reminders));
             render();
-        }
-
-        function format(s) {
-            return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
         }
 
         // Timer
@@ -127,8 +102,7 @@
             reminders.forEach(r => {
                 r.left--;
                 if(r.left <= 0) {
-                    showPopup(r.msg);
-                    new Notification("Nhắc nhở!", { body: r.msg });
+                    showNotify(r.msg);
                     r.left = r.time * 60;
                 }
                 changed = true;
@@ -136,18 +110,20 @@
             if(changed) render();
         }, 1000);
 
-        function showPopup(msg) {
-            document.getElementById('popMsg').innerText = msg;
+        function showNotify(msg) {
+            // Hiện Popup trong Web
+            document.getElementById('popTxt').innerText = msg;
             document.getElementById('overlay').style.display = 'flex';
-            // Phát tiếng
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            osc.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.1);
+
+            if(Notification.permission === 'granted') {
+                new Notification("Nhắc nhở", {
+                    body: msg,
+                    icon: './icon.png',
+                    silent: true
+                });
+            }
         }
 
-        // Xin quyền thông báo khi mở App
         if(Notification.permission !== 'granted') Notification.requestPermission();
         render();
     </script>
