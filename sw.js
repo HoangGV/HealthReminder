@@ -23,3 +23,6 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then((res) => res || fetch(e.request))
   );
 });
+
+self.addEventListener('fetch', function(event) {
+});
