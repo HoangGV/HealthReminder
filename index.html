@@ -13,16 +13,26 @@
         .box { background: white; width: 100%; max-width: 400px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         h2 { text-align: center; margin-top: 0; color: #1e293b; }
         
-        .row { margin-bottom: 15px; display: flex; gap: 10px; }
-        input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
-        button { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .row { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
+        input[type="text"], input[type="number"] { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+        
+        /* Style cho nút Toggle âm thanh */
+        .sound-toggle {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #f1f5f9; padding: 10px; border-radius: 8px; margin-bottom: 15px;
+            cursor: pointer;
+        }
+        .sound-toggle input { width: 18px; height: 18px; cursor: pointer; }
+        .sound-toggle label { flex: 1; margin-left: 10px; cursor: pointer; font-weight: 500; color: #475569; }
+
+        button { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; }
         button:hover { background: #1d4ed8; }
         
         #list { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
         .item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
         .del { color: red; cursor: pointer; font-weight: bold; padding: 5px; }
 
-        /* Popup đè lên màn hình */
+        /* Popup */
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
         .modal { background: white; padding: 30px; border-radius: 16px; text-align: center; width: 300px; animation: pop 0.3s; }
         @keyframes pop { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
@@ -31,14 +41,22 @@
 <body>
 
     <div class="box">
-        <h2>⏰ Nhắc nhở sức khỏe</h2>
+        <h2>⏰ Nhắc nhở</h2>
+        
         <div class="row">
             <input id="msg" type="text" placeholder="Nội dung" value="Uống nước 💧">
         </div>
         <div class="row">
             <input id="time" type="number" placeholder="Phút" value="30">
-            <button onclick="add()">Thêm</button>
         </div>
+
+        <div class="sound-toggle" onclick="toggleSound()">
+            <input type="checkbox" id="soundCheck">
+            <label for="soundCheck">Bật âm thanh thông báo Windows</label>
+        </div>
+
+        <button onclick="add()">Thêm Nhắc Nhở</button>
+        
         <div id="list"></div>
         <div style="font-size:12px; color:#888; text-align:center; margin-top:15px">
             Hoàng GV
@@ -54,13 +72,17 @@
     </div>
 
     <script>
-        // 1. Đăng ký Service Worker để chạy Offline
+        // --- 1. CONFIG & SERVICE WORKER ---
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').then(() => console.log("Service Worker Registered"));
+            navigator.serviceWorker.register('./sw.js');
         }
 
-        // 2. Logic App
+        // --- 2. QUẢN LÝ DỮ LIỆU ---
         let reminders = JSON.parse(localStorage.getItem('offlineDB')) || [];
+        
+        // Load trạng thái âm thanh đã lưu (Mặc định là false - Tắt)
+        let isSoundOn = JSON.parse(localStorage.getItem('soundSetting')) || false;
+        document.getElementById('soundCheck').checked = isSoundOn;
 
         function render() {
             const el = document.getElementById('list');
@@ -96,7 +118,18 @@
             render();
         }
 
-        // Timer
+        // Hàm lưu cài đặt âm thanh khi bấm vào checkbox
+        function toggleSound() {
+            const checkbox = document.getElementById('soundCheck');
+            // Đảo ngược trạng thái checkbox vì sự kiện click lan truyền
+            // (Hoặc đơn giản là lấy giá trị hiện tại của nó)
+            setTimeout(() => {
+                isSoundOn = checkbox.checked;
+                localStorage.setItem('soundSetting', JSON.stringify(isSoundOn));
+            }, 50); 
+        }
+
+        // --- 3. ĐỒNG HỒ ĐẾM NGƯỢC ---
         setInterval(() => {
             let changed = false;
             reminders.forEach(r => {
@@ -110,21 +143,22 @@
             if(changed) render();
         }, 1000);
 
+        // --- 4. XỬ LÝ THÔNG BÁO ---
         function showNotify(msg) {
             // Hiện Popup trong Web
             document.getElementById('popTxt').innerText = msg;
             document.getElementById('overlay').style.display = 'flex';
-
             if(Notification.permission === 'granted') {
                 new Notification("Nhắc nhở", {
                     body: msg,
                     icon: './icon.png',
-                    silent: true
+                    silent: !isSoundOn 
                 });
             }
         }
 
         if(Notification.permission !== 'granted') Notification.requestPermission();
+        
         render();
     </script>
 </body>
